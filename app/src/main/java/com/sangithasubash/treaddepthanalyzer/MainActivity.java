@@ -12,6 +12,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 import java.io.File;
 import java.io.IOException;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -36,9 +38,11 @@ public class MainActivity extends AppCompatActivity {
         resultTextView = findViewById(R.id.resultTextView);
         Button selectImageButton = findViewById(R.id.selectImageButton);
         Button uploadButton = findViewById(R.id.uploadButton);
+        Button classifyButton = findViewById(R.id.classifyButton); // New button for classification
 
         selectImageButton.setOnClickListener(v -> openImageSelector());
-        uploadButton.setOnClickListener(v -> uploadImage());
+        uploadButton.setOnClickListener(v -> uploadImageForTreadDepth());
+        classifyButton.setOnClickListener(v -> classifyTireImage()); // Classification button logic
     }
 
     private void openImageSelector() {
@@ -57,9 +61,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void uploadImage() {
+    private void uploadImageForTreadDepth() {
         if (imageUri != null) {
-            File file = new File(FileUtils.getPath(this, imageUri));  // Get file path from URI
+            File file = new File(FileUtils.getPath(this, imageUri)); // Get file path from URI
             RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
             MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
 
@@ -70,9 +74,18 @@ public class MainActivity extends AppCompatActivity {
                 public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
                     if (response.isSuccessful() && response.body() != null) {
                         try {
-                            resultTextView.setText("Tread Depth: " + response.body().string());
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
+                            String result = response.body().string();
+                            JSONObject jsonObject = new JSONObject(result);
+                            String treadDepthMM = jsonObject.getString("tread_depth_mm");
+                            String treadDepthInch = jsonObject.getString("tread_depth_inch");
+
+                            // Display the result in a user-friendly format
+                            String formattedResult = "Tread Depth: " +
+                                    treadDepthMM + " (" + treadDepthInch + ")";
+                            resultTextView.setText(formattedResult);
+                        } catch (IOException | JSONException e) {
+                            e.printStackTrace();
+                            Toast.makeText(MainActivity.this, "Error parsing response", Toast.LENGTH_SHORT).show();
                         }
                     } else {
                         Toast.makeText(MainActivity.this, "Failed to get response", Toast.LENGTH_SHORT).show();
@@ -84,6 +97,47 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Upload failed", Toast.LENGTH_SHORT).show();
                 }
             });
+        } else {
+            Toast.makeText(this, "Please select an image first", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void classifyTireImage() {
+        if (imageUri != null) {
+            File file = new File(FileUtils.getPath(this, imageUri)); // Get file path from URI
+            RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
+            MultipartBody.Part body = MultipartBody.Part.createFormData("image", file.getName(), requestFile);
+
+            ApiService apiService = RetrofitClient.getRetrofitInstance().create(ApiService.class);
+            Call<ResponseBody> call = apiService.classifyImage(body);
+            call.enqueue(new Callback<ResponseBody>() {
+                @Override
+                public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        try {
+                            String result = response.body().string();
+                            JSONObject jsonObject = new JSONObject(result);
+                            String classification = jsonObject.getString("classification");
+
+                            // Display the classification result
+                            String formattedResult = "Tire Classification: " + classification;
+                            resultTextView.setText(formattedResult);
+                        } catch (IOException | JSONException e) {
+                            e.printStackTrace();
+                            Toast.makeText(MainActivity.this, "Error parsing response", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        Toast.makeText(MainActivity.this, "Failed to get response", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<ResponseBody> call, Throwable t) {
+                    Toast.makeText(MainActivity.this, "Classification failed", Toast.LENGTH_SHORT).show();
+                }
+            });
+        } else {
+            Toast.makeText(this, "Please select an image first", Toast.LENGTH_SHORT).show();
         }
     }
 }

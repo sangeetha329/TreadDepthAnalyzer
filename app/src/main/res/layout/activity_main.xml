@@ -41,4 +41,14 @@
         android:layout_marginTop="16dp"
         android:layout_gravity="center" />
 
+    <Button
+        android:id="@+id/classifyButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Check Tire Condition "
+        android:layout_below="@id/uploadButton"
+        android:layout_marginTop="16dp"
+        android:layout_gravity="center" />
+
+
 </LinearLayout>

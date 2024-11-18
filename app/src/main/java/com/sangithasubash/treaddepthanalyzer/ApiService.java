@@ -11,4 +11,10 @@ public interface ApiService {
     @Multipart
     @POST("/upload")
     Call<ResponseBody> uploadImage(@Part MultipartBody.Part image);
+
+    @Multipart
+    @POST("/classify")  // Add this endpoint for classification
+    Call<ResponseBody> classifyImage(@Part MultipartBody.Part image);
 }
+
+
